@@ -1,0 +1,496 @@
+
+#define FILTERSETTLETIME 5000 // Time (ms) to allow the filters to settle before sending data
+#define SERIALPRINT	// include print statement for commissioning - comment this line to exclude
+#define PHASE2 8	// Number of samples delay for L2
+#define PHASE3 17	// Number of samples delay for L3, also size of array
+// These can be adjusted if the phase correction is not adequate
+
+//Set Voltage and current input pins
+int inPinV = 0;
+int inPinI1 = 1;
+int inPinI2 = 2;
+int inPinI3 = 3;
+int inPinI4 = 4;
+int inPinI5 = 5;
+int inPinI6 = 1;
+int inPinI7 = 2;
+int inPinI8 = 3;
+int inPinI9 = 4;
+int inPinI10 = 5;
+
+double Vcal = 228.289; // Calibration - constant for voltage input - for ideal power voltage adapter
+double Ical1 = 134.00; // Calibration constant for current transformer 1
+double Ical2 = 134.00; // Calibration constant for current transformer 2
+double Ical3 = 134.00; // Calibration constant for current transformer 3
+double Ical4 = 134.00; // Calibration constant for current transformer 4
+double Ical5 = 134.00; // Calibration constant for current transformer 5
+double Ical6 = 134.00; // Calibration constant for current transformer 1
+double Ical7 = 134.00; // Calibration constant for current transformer 2
+double Ical8 = 134.00; // Calibration constant for current transformer 3
+double Ical9 = 134.00; // Calibration constant for current transformer 4
+double Ical10 = 134.00; // Calibration constant for current transformer 5
+double Phasecal1 = 1.00; // Calibration constant for phase shift L1
+double Phasecal2 = 1.68; // Calibration constant for phase shift L2
+double Phasecal3 = 1.00; // Calibration constant for phase shift L3
+//--------------------------------------------------------------------------------------
+// Variable declaration for filters, phase shift, voltages, currents & powers
+//--------------------------------------------------------------------------------------
+int lastSampleV,sampleV=0; //sample_ holds the raw analog read value, lastSample_ holds the last sample
+int lastSampleI1,sampleI1=0;
+int lastSampleI2,sampleI2=0;
+int lastSampleI3,sampleI3=0;
+int lastSampleI4,sampleI4=0;
+int lastSampleI5,sampleI5=0;
+int lastSampleI6,sampleI6=0;
+int lastSampleI7,sampleI7=0;
+int lastSampleI8,sampleI8=0;
+int lastSampleI9,sampleI9=0;
+int lastSampleI10,sampleI10=0;
+
+double lastFilteredV,filteredV; //Filtered_ is the raw analog value minus the DC offset
+double lastFilteredI1, filteredI1;
+double lastFilteredI2, filteredI2;
+double lastFilteredI3, filteredI3;
+double lastFilteredI4, filteredI4;
+double lastFilteredI5, filteredI5;
+double lastFilteredI6, filteredI6;
+double lastFilteredI7, filteredI7;
+double lastFilteredI8, filteredI8;
+double lastFilteredI9, filteredI9;
+double lastFilteredI10, filteredI10;
+double phaseShiftedV1; //Holds the calibrated delayed & phase shifted voltage.
+double phaseShiftedV2;
+double phaseShiftedV3;
+double sqV,sumV,sqI1,sumI1,sqI2,sumI2,
+       sqI3,sumI3,sqI4,sumI4,sqI5,sumI5,
+       sqI6,sumI6,sqI7,sumI7,
+       sqI8,sumI8,sqI9,sumI9,sqI10,sumI10;
+double instP1,sumP1,instP2,sumP2,instP3,sumP3,//sq = squared, sum = Sum, inst = instantaneous
+       instP4,sumP4,instP5,sumP5,instP6,sumP6,
+       instP7,sumP7,instP8,sumP8,instP9,sumP9,
+       instP10,sumP10; 
+int startV; //Instantaneous voltage at start of sample window.
+double realPower1, // The final data
+apparentPower1,
+powerFactor1,
+Irms1,
+realPower2,
+apparentPower2,
+powerFactor2,
+Irms2,
+realPower3,
+apparentPower3,
+powerFactor3,
+Irms3,
+realPower4,
+apparentPower4,
+powerFactor4,
+Irms4,
+realPower5,
+apparentPower5,
+powerFactor5,
+Irms5,
+realPower6,
+apparentPower6,
+powerFactor6,
+Irms6,
+realPower7,
+apparentPower7,
+powerFactor7,
+Irms7,
+realPower8,
+apparentPower8,
+powerFactor8,
+Irms8,
+realPower9,
+apparentPower9,
+powerFactor9,
+Irms9,
+realPower10,
+apparentPower10,
+powerFactor10,
+Irms10,
+Vrms,
+realPower,
+Irms;
+
+boolean settled = false;
+int SupplyVoltage;
+
+void setup()
+{
+Serial.begin(9600);
+pinMode(2,OUTPUT);
+pinMode(6,OUTPUT);
+delay(20000);
+}
+//*********************************************************************************************************************
+void loop()
+{
+  
+if (!settled && millis() > FILTERSETTLETIME) settled = true;
+if (settled)
+{
+// Outer loop - Reads Voltages & Currents - Sends results
+calcVI3Ph(11,2000); // Calculate all. No.of complete cycles, time-out
+
+
+
+
+Serial.print("PU1, 1Ph-CT1,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms1); Serial.print(","); Serial.println(powerFactor5);
+
+Serial.print("PU1, 1Ph-CT2,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms2); Serial.print(","); Serial.println(powerFactor5);
+ 
+Serial.print("PU1, 1Ph-CT3,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms3); Serial.print(","); Serial.println(powerFactor5);
+ 
+Serial.print("PU1, 1Ph-CT4,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms4); Serial.print(","); Serial.println(powerFactor5);
+
+Serial.print("PU1, 1Ph-CT5,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms5); Serial.print(","); Serial.println(powerFactor5);
+
+Serial.print("PU1, 1Ph-CT6,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms6); Serial.print(","); Serial.println(powerFactor5);
+
+Serial.print("PU1, 1Ph-CT7,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms7); Serial.print(","); Serial.println(powerFactor5);
+
+Serial.print("PU1, 1Ph-CT8,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms8); Serial.print(","); Serial.println(powerFactor5);
+
+Serial.print("PU1, 1Ph-CT9,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms9); Serial.print(","); Serial.println(powerFactor5);
+
+Serial.print("PU1, 1Ph-CT10,"); Serial.print(Vrms); Serial.print(","); Serial.print(Irms10); Serial.print(","); Serial.println(powerFactor5);
+
+//delay(300);
+}
+}
+//*********************************************************************************************************************
+void calcVI3Ph(int cycles, int timeout)
+{
+int SupplyVoltage = readVcc();
+//Serial.print("SupplyVoltage"); Serial.println(SupplyVoltage);
+int crossCount = 0; // Used to measure number of times threshold is crossed.
+int numberOfSamples = 0; // This is now incremented
+int numberOfPowerSamples = 0; // Needed because 1 cycle of voltages needs to be stored before use
+boolean lastVCross, checkVCross; // Used to measure number of times threshold is crossed.
+double storedV[PHASE3]; // Array to store >120 degrees of voltage samples
+//-------------------------------------------------------------------------------------------------------------------------
+// 1) Waits for the waveform to be close to 'zero' (500 adc) part in sin curve.
+//-------------------------------------------------------------------------------------------------------------------------
+boolean st=false; // an indicator to exit the while loop
+unsigned long start = millis(); // millis()-start makes sure it doesnt get stuck in the loop if there is an error.
+
+
+while(st==false) // Wait for first zero crossing...
+{
+      digitalWrite(6,LOW);
+      //delay(2);
+      digitalWrite(2,LOW);
+      //delay(2);
+      startV = analogRead(inPinV); // using the voltage waveform
+      digitalWrite(2,LOW);
+      digitalWrite(6,HIGH);
+      
+      if ((startV < 550) && (startV > 440)) st=true; // check it's within range
+      if ((millis()-start)>timeout) st = true;
+}
+
+
+//-------------------------------------------------------------------------------------------------------------------------
+// 2) Main measurment loop
+//-------------------------------------------------------------------------------------------------------------------------
+start = millis();
+
+
+while ((crossCount < cycles * 2) && ((millis()-start)<timeout))
+{
+  
+lastSampleV=sampleV; // Used for digital high pass filter - offset removal
+lastSampleI1=sampleI1;
+lastSampleI2=sampleI2;
+lastSampleI3=sampleI3;
+lastSampleI4=sampleI4;
+lastSampleI5=sampleI5;
+lastSampleI6=sampleI6;
+lastSampleI7=sampleI7;
+lastSampleI8=sampleI8;
+lastSampleI9=sampleI9;
+lastSampleI10=sampleI10;
+lastFilteredV = filteredV;
+lastFilteredI1 = filteredI1;
+lastFilteredI2 = filteredI2;
+lastFilteredI3 = filteredI3;
+lastFilteredI4 = filteredI4;
+lastFilteredI5 = filteredI5;
+lastFilteredI6 = filteredI6;
+lastFilteredI7 = filteredI7;
+lastFilteredI8 = filteredI8;
+lastFilteredI9 = filteredI9;
+lastFilteredI10 = filteredI10;
+//-----------------------------------------------------------------------------
+// A) Read in raw voltage and current samples
+//-----------------------------------------------------------------------------
+digitalWrite(6,LOW);
+//delay(2);
+digitalWrite(2,LOW);
+//delay(2);
+sampleV = analogRead(inPinV);
+sampleI1 = analogRead(inPinI1); // Read in raw current signal 
+sampleI2 = analogRead(inPinI2); // Read in raw current signal
+sampleI3 = analogRead(inPinI3); // Read in raw current signal
+sampleI4 = analogRead(inPinI4); // Read in raw current signal
+sampleI5 = analogRead(inPinI5); // Read in raw current signal
+
+digitalWrite(2,HIGH);
+//delay(2);
+sampleI6 = analogRead(inPinI6); // Read in raw current signal
+sampleI7 = analogRead(inPinI7); // Read in raw current signal
+sampleI8 = analogRead(inPinI8); // Read in raw current signal
+sampleI9 = analogRead(inPinI9); // Read in raw current signal
+sampleI10 = analogRead(inPinI10); // Read in raw current signal
+digitalWrite(2,LOW);
+digitalWrite(6,HIGH);
+//-----------------------------------------------------------------------------
+// B) Apply digital high pass filters to remove 2.5V DC offset (to centre wave on 0).
+//-----------------------------------------------------------------------------
+filteredV = 0.996*(lastFilteredV+sampleV-lastSampleV);
+filteredI1 = 0.996*(lastFilteredI1+sampleI1-lastSampleI1);
+filteredI2 = 0.996*(lastFilteredI2+sampleI2-lastSampleI2);
+filteredI3 = 0.996*(lastFilteredI3+sampleI3-lastSampleI3);
+filteredI4 = 0.996*(lastFilteredI4+sampleI4-lastSampleI4);
+filteredI5 = 0.996*(lastFilteredI5+sampleI5-lastSampleI5);
+filteredI6 = 0.996*(lastFilteredI6+sampleI6-lastSampleI6);
+filteredI7 = 0.996*(lastFilteredI7+sampleI7-lastSampleI7);
+filteredI8 = 0.996*(lastFilteredI8+sampleI8-lastSampleI8);
+filteredI9 = 0.996*(lastFilteredI9+sampleI9-lastSampleI9);
+filteredI10 = 0.996*(lastFilteredI10+sampleI10-lastSampleI10);
+
+storedV[numberOfSamples%PHASE3] = filteredV; // store this voltage sample in circular buffer
+
+if (crossCount > 2) // one complete cycle has been stored, so can use delayed
+{ // voltage samples to calculate instantaneous powers
+//-----------------------------------------------------------------------------
+// C) Root-mean-square method voltage
+//-----------------------------------------------------------------------------
+sqV= filteredV * filteredV; //1) square voltage values
+//Serial.print(" Squared Volt"); Serial.println(sqV);
+sumV += sqV; //2) sum
+//Serial.print(" Squared sum"); Serial.println(sumV);
+//-----------------------------------------------------------------------------
+// D) Root-mean-square method current
+//-----------------------------------------------------------------------------
+sqI1 = filteredI1 * filteredI1; //1) square current values
+sumI1 += sqI1; //2) sum
+sqI2 = filteredI2 * filteredI2;
+sumI2 += sqI2;
+sqI3 = filteredI3 * filteredI3;
+sumI3 += sqI3;
+sqI4 = filteredI4 * filteredI4;
+sumI4 += sqI4;
+sqI5 = filteredI5 * filteredI5;
+sumI5 += sqI5;
+sqI6 = filteredI6 * filteredI6;
+sumI6 += sqI6;
+sqI7 = filteredI7 * filteredI7; 
+sumI7 += sqI7; 
+sqI8 = filteredI8 * filteredI8;
+sumI8 += sqI8;
+sqI9 = filteredI9 * filteredI9;
+sumI9 += sqI9;
+sqI10 = filteredI10 * filteredI10;
+sumI10 += sqI10;
+//---------------
+//-----------------------------------------------------------------------------
+// E) Phase calibration - for Phase 1: shifts V1 to correct transformer errors
+// for phases 2 & 3 delays V1 by 120 degrees & 240 degrees respectively
+// and shifts for fine adjustment and to correct transformer errors.
+//-----------------------------------------------------------------------------
+phaseShiftedV1 = lastFilteredV + Phasecal1 * (filteredV - lastFilteredV);
+//Serial.print(" Phase corrected Volt"); Serial.println(phaseShiftedV1);
+phaseShiftedV2 = storedV[(numberOfSamples-PHASE2-1)%PHASE3]
++ Phasecal2 * (storedV[(numberOfSamples-PHASE2)%PHASE3]
+- storedV[(numberOfSamples-PHASE2-1)%PHASE3]);
+phaseShiftedV3 = storedV[(numberOfSamples+1)%PHASE3]
++ Phasecal3 * (storedV[(numberOfSamples+2)%PHASE3]
+- storedV[(numberOfSamples+1)%PHASE3]);
+//-----------------------------------------------------------------------------
+// F) Instantaneous power calc
+//-----------------------------------------------------------------------------
+instP1 = phaseShiftedV1 * filteredI1; //Instantaneous Power 
+sumP1 +=instP1; // sum
+instP2 = phaseShiftedV1 * filteredI2;
+sumP2 +=instP2;
+instP3 = phaseShiftedV1 * filteredI3;
+sumP3 +=instP3;
+instP4 = phaseShiftedV1 * filteredI4;
+sumP4 +=instP4;
+instP5 = phaseShiftedV1 * filteredI5;
+sumP5 +=instP5;
+instP6 = phaseShiftedV1 * filteredI6;
+sumP6 +=instP6;
+instP7 = phaseShiftedV1 * filteredI7; 
+sumP7 +=instP7; 
+instP8 = phaseShiftedV1 * filteredI8;
+sumP8 +=instP8;
+instP9 = phaseShiftedV1 * filteredI9;
+sumP9 +=instP9;
+instP10 = phaseShiftedV1 * filteredI10; 
+sumP10 +=instP10;
+
+numberOfPowerSamples++; //Count number of times looped for Power averages.
+}
+//-----------------------------------------------------------------------------
+// G) Find the number of times the voltage has crossed the initial voltage
+// - every 2 crosses we will have sampled 1 wavelength
+// - so this method allows us to sample an integer number of half wavelengths which increases accuracy
+//-----------------------------------------------------------------------------
+lastVCross = checkVCross;
+if (sampleV > startV)
+checkVCross = true;
+else
+checkVCross = false;
+if (numberOfSamples==1)
+lastVCross = checkVCross;
+if (lastVCross != checkVCross)
+crossCount++;
+numberOfSamples++; //Count number of times looped.
+}
+
+
+//-------------------------------------------------------------------------------------------------------------------------
+// 3) Post loop calculations
+//-------------------------------------------------------------------------------------------------------------------------
+//Calculation of the root of the mean of the voltage and current squared (rms)
+//Calibration coefficients applied.
+double V_Ratio = Vcal *((SupplyVoltage/1000.0) / 1023.0);
+Vrms = V_Ratio * sqrt(sumV / numberOfPowerSamples);
+double I_Ratio1 = Ical1 *((SupplyVoltage/1000.0) / 1023.0);
+Irms1 = I_Ratio1 * sqrt(sumI1 / numberOfPowerSamples);
+double I_Ratio2 = Ical2 *((SupplyVoltage/1000.0) / 1023.0);
+Irms2 = I_Ratio2 * sqrt(sumI2 / numberOfPowerSamples);
+double I_Ratio3 = Ical3 *((SupplyVoltage/1000.0) / 1023.0);
+Irms3 = I_Ratio3 * sqrt(sumI3 / numberOfPowerSamples);
+double I_Ratio4 = Ical4 *((SupplyVoltage/1000.0) / 1023.0);
+Irms4 = I_Ratio4 * sqrt(sumI4 / numberOfPowerSamples);
+double I_Ratio5 = Ical5 *((SupplyVoltage/1000.0) / 1023.0);
+Irms5 = I_Ratio5 * sqrt(sumI5 / numberOfPowerSamples);
+double I_Ratio6 = Ical6 *((SupplyVoltage/1000.0) / 1023.0);
+Irms6 = I_Ratio6 * sqrt(sumI6 / numberOfPowerSamples);
+double I_Ratio7 = Ical7 *((SupplyVoltage/1000.0) / 1023.0);
+Irms7 = I_Ratio7 * sqrt(sumI7 / numberOfPowerSamples);
+double I_Ratio8 = Ical8 *((SupplyVoltage/1000.0) / 1023.0);
+Irms8 = I_Ratio8 * sqrt(sumI8 / numberOfPowerSamples);
+double I_Ratio9 = Ical9 *((SupplyVoltage/1000.0) / 1023.0);
+Irms9 = I_Ratio9 * sqrt(sumI9 / numberOfPowerSamples);
+double I_Ratio10 = Ical10 *((SupplyVoltage/1000.0) / 1023.0);
+Irms10 = I_Ratio10 * sqrt(sumI10 / numberOfPowerSamples);
+
+
+//Calculation power values
+realPower1 = V_Ratio * I_Ratio1 * sumP1 / numberOfPowerSamples;
+apparentPower1 = Vrms * Irms1;
+powerFactor1 = realPower1 / apparentPower1;
+realPower2 = V_Ratio * I_Ratio2 * sumP2 / numberOfPowerSamples;
+apparentPower2 = Vrms * Irms2;
+powerFactor2 = realPower2 / apparentPower2;
+realPower3 = V_Ratio * I_Ratio3 * sumP3 / numberOfPowerSamples;
+apparentPower3 = Vrms * Irms3;
+powerFactor3 = realPower3 / apparentPower3;
+
+realPower4 = V_Ratio * I_Ratio4 * sumP4 / numberOfPowerSamples;
+apparentPower4 = Vrms * Irms4;
+powerFactor4 = realPower4 / apparentPower4;
+
+realPower5 = V_Ratio * I_Ratio5 * sumP5 / numberOfPowerSamples;
+apparentPower5 = Vrms * Irms5;
+powerFactor5 = realPower5 / apparentPower5;
+
+realPower6 = V_Ratio * I_Ratio6 * sumP6 / numberOfPowerSamples;
+apparentPower6 = Vrms * Irms6;
+powerFactor6 = realPower6 / apparentPower6;
+
+realPower7 = V_Ratio * I_Ratio7 * sumP7 / numberOfPowerSamples;
+apparentPower7 = Vrms * Irms7;
+powerFactor7 = realPower7 / apparentPower7;
+
+realPower8 = V_Ratio * I_Ratio8 * sumP8 / numberOfPowerSamples;
+apparentPower8 = Vrms * Irms8;
+powerFactor8 = realPower8 / apparentPower8;
+
+realPower9 = V_Ratio * I_Ratio9 * sumP9 / numberOfPowerSamples;
+apparentPower9 = Vrms * Irms9;
+powerFactor9 = realPower9 / apparentPower9;
+
+realPower10 = V_Ratio * I_Ratio10 * sumP10 / numberOfPowerSamples;
+apparentPower10 = Vrms * Irms10;
+powerFactor10 = realPower10 / apparentPower10;
+
+
+
+//Normalising current & power
+
+if(Irms1 <0.3) { Irms1=0; realPower1=0; powerFactor1=0;}
+if(Irms2 <0.3) { Irms2=0; realPower2=0; powerFactor2=0;}
+if(Irms3 <0.3) { Irms3=0; realPower3=0; powerFactor3=0;}
+if(Irms4 <0.3) { Irms4=0; realPower4=0; powerFactor4=0;}
+if(Irms5 <0.3) { Irms5=0; realPower5=0; powerFactor5=0;}
+if(Irms6 <0.3) { Irms6=0; realPower6=0; powerFactor6=0;}
+if(Irms7 <0.3) { Irms7=0; realPower7=0; powerFactor7=0;}
+if(Irms8 <0.3) { Irms8=0; realPower8=0; powerFactor8=0;}
+if(Irms9 <0.3) { Irms9=0; realPower9=0; powerFactor9=0;}
+if(Irms10 <0.3) { Irms10=0; realPower10=0; powerFactor10=0;}
+
+Irms = (Irms1 + Irms2 + Irms3)/3;
+realPower = 1.73 * Vrms * Irms * powerFactor1;
+
+//Reset accumulators
+sumV = 0;
+sumI1 = 0;
+sumI2 = 0;
+sumI3 = 0;
+sumI4 = 0;
+sumI5 = 0;
+sumI6 = 0;
+sumI7 = 0;
+sumI8 = 0;
+sumI9 = 0;
+sumI10 = 0;
+
+sumP1 = 0;
+sumP2 = 0;
+sumP3 = 0;
+sumP4 = 0;
+sumP5 = 0;
+sumP6 = 0;
+sumP7 = 0;
+sumP8 = 0;
+sumP9 = 0;
+sumP10 = 0;
+}
+
+
+long readVcc() {
+
+/*ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1); // for ADK
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);  //for UNO
+
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Start conversion
+  
+  while (bit_is_set(ADCSRA,ADSC)); // measuring
+  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH  
+  uint8_t high = ADCH; // unlocks both
+ 
+  long result = (high<<8) | low;
+ 
+  result = 1125300L / result; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
+  return result; // Vcc in millivolts */
+  
+  long result;
+  // Read 1.1V reference against AVcc
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Convert
+  while (bit_is_set(ADCSRA,ADSC));
+  result = ADCL;
+  result |= ADCH<<8;
+  result = 1126400L / result; // Back-calculate AVcc in mV
+  return result;
+
+}
