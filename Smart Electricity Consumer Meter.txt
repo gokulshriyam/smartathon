@@ -1,0 +1,667 @@
+//0 1 Rx Tx
+//lcd(8, 7, 6, 5, 4, 3, 2)
+//9-reset
+//10-alarm
+//11-display
+//12-Buzzer
+//13-Battery led
+//A7-V1
+//A6-CT1
+//A5-Next
+//A4-INC
+//A3-Set
+//A2-Battery Status
+//A1-Free
+//A0-Free
+
+#include "EmonLib.h"             // Include Emon Library
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(8, 7, 6, 5, 4, 3, 2);
+
+EnergyMonitor emeter;             // Create an instance
+const int interval=1000;
+unsigned long previousMillis=0;
+int time=0;
+float energykWh=0;
+
+const int  buttonPin1 = 9;    // the pin that the pushbutton is attached to
+const int  buttonPin2 = 10; 
+const int  buttonPin3 = 11; 
+const int  buttonPin4 = A2;
+const int  buttonPin5 = A3;
+const int  buttonPin6 = A4;
+
+int buttonPushCounter1 = 0;   
+int buttonState1 = 0;         
+int lastButtonState1 = 0;     
+int buttonPushCounter2 = 0;   
+int buttonState2 = 0;         
+int lastButtonState2 = 0;
+int buttonPushCounter3 = 0;   
+int buttonState3 = 0;         
+int lastButtonState3 = 0;
+int buttonPushCounter4 = 0;   
+int buttonState4 = 0;         
+int lastButtonState4 = 0;     
+int buttonPushCounter5 = 0;   
+int buttonState5 = 0;         
+int lastButtonState5 = 0;
+int buttonPushCounter6 = 0;   
+int buttonState6 = 0;         
+int lastButtonState6 = 0;
+
+
+int state;
+int modeset=0;
+int stateset=0;
+int alarmset=0;
+int value=0;
+int unitvalue=1;
+int pricevalue=101;
+float price;
+int price1;
+int price2;
+int price3;
+int price4;
+int price5;
+int price6;
+int price7;
+
+
+
+void setup() 
+{
+  emeter.voltage(A0, 234.26, 1.7);  // Voltage: input pin, calibration, phase_shift
+  emeter.current(A1, 111.1);       // Current: input pin, calibration.
+  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT);
+  digitalWrite(13, LOW);
+  lcd.begin(16,2); 
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Smart"); 
+  lcd.setCursor(3,1);
+  lcd.print("E-Meter"); 
+  delay(5000);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Press Reset");
+  lcd.setCursor(0,1);
+  lcd.print("To start");
+  pinMode(buttonPin1, INPUT);
+  pinMode(buttonPin2, INPUT);
+  pinMode(buttonPin3, INPUT);
+  pinMode(buttonPin4, INPUT);
+  pinMode(buttonPin5, INPUT);
+  pinMode(buttonPin6, INPUT);
+}
+
+void loop() {
+  
+buttonState1 = digitalRead(buttonPin1);
+if (buttonState1 != lastButtonState1)
+{
+    if (buttonState1 == HIGH) 
+    {
+      lcd.clear();
+      stateset=1;
+      modeset=1;
+      buttonPushCounter1++;
+      
+    }
+}
+  lastButtonState1 = buttonState1;
+  
+ if(buttonPushCounter1 != 0 && modeset == 1 && buttonPushCounter3 == 0)
+ {
+  stateselect();
+ }
+ if(buttonPushCounter1 != 0 && buttonPushCounter3 != 0)
+{
+  energykWh=0;
+   lcd.setCursor(0,0);
+   lcd.print("Press Display");
+   buttonPushCounter3=3;
+}
+ 
+buttonState2 = digitalRead(buttonPin2);
+if (buttonState2 != lastButtonState2)
+{
+    if (buttonState2 == HIGH) 
+    {
+      lcd.clear();
+      alarmset=1;
+      modeset=0;
+      buttonPushCounter2++;
+      buttonPushCounter5=0;
+      buttonPushCounter6=0;
+      
+    }
+}
+  lastButtonState2 = buttonState2;
+  
+ if(buttonPushCounter2 != 0 && modeset == 0)
+ {
+  alarmselect();
+ }
+
+buttonState3 = digitalRead(buttonPin3);
+if (buttonState3 != lastButtonState3)
+{
+    if (buttonState3 == HIGH) 
+    {
+      lcd.clear();
+      buttonPushCounter3++;
+      buttonPushCounter5=1;
+      buttonPushCounter6=0;
+      buttonPushCounter2=0;
+      buttonPushCounter1=0;
+    }
+}
+  lastButtonState3 = buttonState3;
+  
+if(buttonPushCounter3 != 0)
+ {
+   displayselect();
+ }
+ 
+match();
+
+batterycheck();
+
+}
+
+
+void stateselect() {
+  
+buttonState5 = digitalRead(buttonPin5);
+if (buttonState5 != lastButtonState5)
+{
+    if (buttonState5 == HIGH) 
+    {
+      lcd.clear();
+      buttonPushCounter5++;
+    }
+}
+  lastButtonState5 = buttonState5;
+
+if(buttonPushCounter5 == 0 && stateset == 1)
+   {
+        lcd.setCursor(0,0);
+        lcd.print("To set State    " );
+        lcd.setCursor(0,1);
+        lcd.print("Press Button INC ");
+   }
+if(buttonPushCounter5 == 1 && stateset == 1)
+   {
+        lcd.setCursor(0,0);
+        lcd.print("For TN Press SET");
+        lcd.setCursor(0,1);
+        lcd.print("other Press INC");
+        
+        buttonState6 = digitalRead(buttonPin6);
+                
+                     if (buttonState6 != lastButtonState6)
+                {
+                    if (buttonState6 == HIGH) 
+                      {
+                        state= 1;
+                        buttonPushCounter6++;
+                      }
+                }
+                  lastButtonState6 = buttonState6;
+              if (buttonPushCounter6 == 1 && buttonPushCounter5 == 1)
+          {    
+                stateset=0;
+                lcd.clear();
+                lcd.setCursor (0,0);
+                lcd.print("SelectedState TN");
+                lcd.setCursor (0,1);
+                lcd.print("Press Alarm");
+          }
+           
+   }
+if (buttonPushCounter5 == 2 && stateset == 1) 
+   {
+        lcd.setCursor(0,0);
+        lcd.print("For AP Press SET");
+        lcd.setCursor(0,1);
+        lcd.print("other Press INC");
+        
+                buttonState6 = digitalRead(buttonPin6);
+                     if (buttonState6 != lastButtonState6)
+                {
+                    if (buttonState6 == HIGH) 
+                      {
+                        state= 2;
+                        buttonPushCounter6++;
+                      }
+                }
+                  lastButtonState6 = buttonState6;
+           if (buttonPushCounter6 == 1 && buttonPushCounter5 == 2)
+              {    
+                stateset=0;
+                lcd.clear();
+                lcd.setCursor (0,0);
+                lcd.print("SelectedState AP");
+                lcd.setCursor (0,1);
+                lcd.print("Press Alarm");
+              }
+
+   }
+if (buttonPushCounter5 == 3 && stateset == 1) 
+   {
+        lcd.setCursor(0,0);
+        lcd.print("For KA Press SET");
+        lcd.setCursor(0,1);
+        lcd.print("other Press INC");
+        
+                buttonState6 = digitalRead(buttonPin6);
+                     if (buttonState6 != lastButtonState6)
+                {
+                    if (buttonState6 == HIGH) 
+                      {
+                        state= 3;
+                        buttonPushCounter6++;
+                      }
+                }
+                  lastButtonState6 = buttonState6;
+                  
+           if (buttonPushCounter6 == 1 && buttonPushCounter5 == 3)
+              {    
+                stateset=0;
+                lcd.clear();
+                lcd.setCursor (0,0);
+                lcd.print("SelectedState KA");
+                lcd.setCursor (0,1);
+                lcd.print("Press Alarm");
+              }
+
+   }
+
+if (buttonPushCounter5==4) 
+   {
+        buttonPushCounter5=0;
+        lcd.clear();
+   }
+    
+} 
+
+
+void alarmselect() {
+  
+buttonState4 = digitalRead(buttonPin4);
+if (buttonState4 != lastButtonState4)
+{
+    if (buttonState4 == HIGH) 
+    {
+      lcd.clear();
+      buttonPushCounter4++;
+      
+    }
+}
+  lastButtonState4 = buttonState4;
+
+if(buttonPushCounter4 % 2 == 0 && buttonPushCounter5 == 0)
+   {
+        lcd.setCursor(0,0);
+        lcd.print("INC for Units" );
+        lcd.setCursor(0,1);
+        lcd.print("Next for other");
+        alarmset=2;
+   }
+   
+if(buttonPushCounter4 % 2 == 1 && buttonPushCounter5 == 0)
+   {
+        lcd.setCursor(0,0);
+        lcd.print("INC for Rupees" );
+        lcd.setCursor(0,1);
+        lcd.print("Next for other");
+        alarmset=3;
+   }
+   
+buttonState5 = digitalRead(buttonPin5);
+if (buttonState5 != lastButtonState5)
+{
+    if (buttonState5 == HIGH) 
+    {
+      lcd.clear();
+      buttonPushCounter5 = buttonPushCounter5+10;
+    }
+}
+  lastButtonState5 = buttonState5;
+if (buttonPushCounter5 == 5 && alarmset !=1)
+{
+      lcd.setCursor(0,0);
+      lcd.print("INC to Increase");
+      lcd.setCursor(0,1);
+      lcd.print("SET to select");
+}
+
+if (buttonPushCounter5 != 5 && alarmset == 2 && buttonPushCounter6 == 0 && buttonPushCounter5 != 0)
+{
+ lcd.setCursor(0,0);
+ lcd.print(buttonPushCounter5);
+ lcd.setCursor(6,0);
+ lcd.print("Press INC");
+ lcd.setCursor(0,1);
+ lcd.print("SET to select");
+}
+ 
+if (buttonPushCounter5 != 5 && alarmset == 3 && buttonPushCounter6 == 0 && buttonPushCounter5 != 0)
+{
+ lcd.setCursor(0,0);
+ lcd.print(buttonPushCounter5);
+ lcd.setCursor(6,0);
+ lcd.print("Press INC");
+ lcd.setCursor(0,1);
+ lcd.print("SET to select");
+}  
+    buttonState6 = digitalRead(buttonPin6);
+                     if (buttonState6 != lastButtonState6)
+                {
+                    if (buttonState6 == HIGH && alarmset == 2) 
+                      {
+                        lcd.clear();
+                        buttonPushCounter6++;
+                        buttonPushCounter4=0;
+                      }
+                      
+                      if (buttonState6 == HIGH && alarmset == 3) 
+                      {
+                        lcd.clear();
+                        buttonPushCounter6++;
+                        buttonPushCounter4=0;
+                      }
+                }
+                  lastButtonState6 = buttonState6;
+
+ if (buttonPushCounter6 == 1 && alarmset == 2)
+{
+ unitvalue= buttonPushCounter5;
+ lcd.setCursor(0,0);
+ lcd.print(buttonPushCounter5);
+ lcd.setCursor(0,1);
+ lcd.print("Press Display");
+ lcd.setCursor(8,0);
+ lcd.print("Units");
+ alarmset = 0;
+} 
+
+ if (buttonPushCounter6 == 1 && alarmset == 3)
+{
+ pricevalue= buttonPushCounter5;
+ lcd.setCursor(0,1);
+ lcd.print("Press Display");
+ lcd.setCursor(0,0);
+ lcd.print(buttonPushCounter5);
+ lcd.setCursor(8,0);
+ lcd.print("Rupees");
+ alarmset = 0;
+}
+}
+void displayselect()
+{
+  if (buttonPushCounter3 % 3 == 1 && buttonPushCounter2 == 0 && buttonPushCounter1 == 0)
+  {
+  unsigned long currentMillis = millis();
+  if ((unsigned long)(currentMillis - previousMillis) >= interval) 
+ {
+  emeter.calcVI(20,2000);                          // Calculate all. No.of wavelengths, time-out
+  float realPower       = emeter.realPower;        //extract Real Power into variable
+  float apparentPower   = emeter.apparentPower;    //extract Apparent Power into variable
+  float powerFactor     = emeter.powerFactor;      //extract Power Factor into Variable
+  float supplyVoltage   = emeter.Vrms;             //extract Vrms into Variable
+  float Irms            = emeter.Irms;             //extract Irms into Variable
+  
+
+  
+  
+  float E=(realPower*time)/3600000;
+  time++;
+ 
+ if (time == 30)
+ {
+   
+ energykWh=energykWh+E;
+ time=0;
+ 
+ }
+      // Use the snapshot to set track time until next event
+      previousMillis = currentMillis;
+      
+switch(state)
+{
+ case 1:
+{
+  if(energykWh <= 100)
+  {
+    price=(energykWh+20);
+  }
+  if(energykWh > 100 && energykWh <= 200)
+  {
+    price=(1.5*energykWh+20);
+  }
+  if(energykWh > 200 && energykWh <= 500)
+  {
+    price1=int (energykWh)%200;
+    price=(430+price1*3);
+  }
+  if(energykWh > 500)
+  {
+    price2=int (energykWh)%500;
+    price=(2130+(price2*6.6));
+  }
+
+  break;
+ }
+
+case 2:
+{
+  if(energykWh <= 50)
+  {
+    price=(energykWh * 1.45);
+  }
+  if(energykWh > 50 && energykWh <= 100)
+  {
+    price1=int (energykWh)%50;
+    price=(2.6*price1+72.5);
+  }
+  if(energykWh > 100 && energykWh <= 200)
+  {
+    price2=int (energykWh)%100;
+    price=(276+price2*3.82);
+  }
+  if(energykWh > 200 && energykWh <= 250)
+  {
+    price3=int (energykWh)%200;
+    price=(867.5+(price3*6.76));
+  }
+  if(energykWh > 250 && energykWh <= 300)
+  {
+    price4=int (energykWh)%250;
+    price=(1205.5+(price4*7.29));
+  }
+  if(energykWh > 300 && energykWh <= 400)
+  {
+    price5=int (energykWh)%300;
+    price=(1570.5+(price5*7.82));
+  }
+  if(energykWh > 400 && energykWh <= 500)
+  {
+    price6=int (energykWh)%400;
+    price=(2352.5+(price6*8.35));
+  }
+  if(energykWh > 500)
+  {
+    price7=int (energykWh)%500;
+    price=(3187.5+(price7*8.88));
+  }
+}
+  break;
+
+
+case 3:
+{
+  if(energykWh <= 30)
+  {
+    price=(energykWh*3.5+60);
+  }
+  if(energykWh > 30 && energykWh <= 100)
+  {
+    price1=int (energykWh)%30;
+    price=(4.8*price1+165);
+  }
+  if(energykWh > 100 && energykWh <= 200)
+  {
+    price2=int (energykWh)%100;
+    price=(501+price2*6.05);
+  }
+  if(energykWh > 200)
+  {
+    price3=int (energykWh)%200;
+    price=(1106+(price3*7.05));
+  }
+}
+  break;
+
+
+default:
+{
+  if(energykWh <= 100)
+  {
+    price=(energykWh+20);
+  }
+  if(energykWh > 100 && energykWh <= 200)
+  {
+    price=(1.5*energykWh+20);
+  }
+  if(energykWh > 200 && energykWh <= 500)
+  {
+    price1=int (energykWh)%200;
+    price=(430+price1*3);
+  }
+  if(energykWh > 500)
+  {
+    price2=int (energykWh)%500;
+    price=(2130+(price2*6.6));
+  }
+}
+  break;
+}
+  lcd.setCursor(8,0); 
+  lcd.print(energykWh);
+  lcd.print("U");
+  lcd.setCursor(0,0); 
+  lcd.print(E);
+  lcd.print("U");
+  lcd.setCursor(8,1);
+  lcd.print(price);
+  lcd.print("Rs");
+  }
+  }
+  if (buttonPushCounter3 % 3 == 2 && buttonPushCounter2 == 0 && buttonPushCounter1 == 0)
+  {
+  emeter.calcVI(20,2000);                          // Calculate all. No.of wavelengths, time-out
+  float realPower       = emeter.realPower;        //extract Real Power into variable
+  float apparentPower   = emeter.apparentPower;    //extract Apparent Power into variable
+  float powerFactor     = emeter.powerFactor;      //extract Power Factor into Variable
+  float supplyVoltage   = emeter.Vrms;             //extract Vrms into Variable
+  float Irms            = emeter.Irms;             //extract Irms into Variable
+  
+  lcd.setCursor(0,1); 
+  lcd.print(Irms-49);
+  lcd.print("A");
+  lcd.setCursor(0,0); 
+  lcd.print(realPower);
+  lcd.print("VA");
+  lcd.setCursor(12,0); 
+  lcd.print(powerFactor+0.65);
+  lcd.setCursor(8,1);
+  lcd.print(supplyVoltage);
+  lcd.print("V");
+  }
+  
+    if (buttonPushCounter3 % 3 == 0 && buttonPushCounter2 == 0 && buttonPushCounter1 == 0)
+  {
+    if(unitvalue != 1 && buttonPushCounter4 == 0)
+    {
+  lcd.setCursor(0,0); 
+  lcd.print("Alarm at :");
+  lcd.setCursor(0,1);
+  lcd.print(unitvalue);
+  lcd.setCursor(8,1);
+  lcd.print("Units");
+    }
+  if(pricevalue != 101 && buttonPushCounter4 == 0)
+    {
+  lcd.setCursor(0,0); 
+  lcd.print("Alarm at :");
+  lcd.setCursor(0,1);
+  lcd.print(pricevalue);
+  lcd.setCursor(8,1);
+  lcd.print("Rupees");
+    }
+     if(buttonPushCounter4 != 0 || (unitvalue == 1 && pricevalue == 101))
+    {
+  lcd.setCursor(0,0); 
+  lcd.print("Alarm not Set");
+  lcd.setCursor(0,1);
+  lcd.print("Hit Alarm to Set");
+    }
+  }
+}
+
+void match()
+{
+  buttonState4 = digitalRead(buttonPin4);
+if (buttonState4 != lastButtonState4)
+{
+    if (buttonState4 == HIGH) 
+    {
+      lcd.clear();
+      buttonPushCounter4++;
+      
+    }
+}
+  lastButtonState4 = buttonState4;
+  
+  
+   if( (energykWh >= unitvalue || price >= pricevalue ) && buttonPushCounter4 == 0 ) 
+  {
+   beep();
+   beep();
+   delay(500);
+  }
+  
+  else
+  {
+       digitalWrite(12, LOW);
+  }
+
+}
+
+void batterycheck()
+{
+  int sensorValue = analogRead(A5);
+  float voltage = sensorValue * (5.00 / 1023.00) * 2; //convert the value to a true voltage.
+  
+  if (voltage <= 1) //set the voltage considered low battery here
+  {
+    digitalWrite(13, HIGH);
+  }
+  else
+  {
+    digitalWrite(13, LOW);
+  }
+}
+
+void beep()
+{
+   digitalWrite(12,HIGH);
+   delay(250);
+   digitalWrite(12, LOW);
+   delay(250);
+}
+
+
